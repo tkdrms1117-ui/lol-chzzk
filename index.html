@@ -10,6 +10,10 @@
     <div class="container">
         <h2>Riot Account Verification</h2>
         <div class="form-group">
+            <label for="chzzkId">Chzzk ID</label>
+            <input type="text" id="chzzkId" name="chzzkId">
+        </div>
+        <div class="form-group">
             <label for="riotName">Riot Name</label>
             <input type="text" id="riotName" name="riotName">
         </div>
@@ -28,6 +32,52 @@
         // Generate a random icon number between 1 and 28 for verification
         const randomIcon = Math.floor(Math.random() * 28) + 1;
         document.getElementById('randomIconNumber').innerText = randomIcon;
+
+        // Add event listener to the verification button
+        document.getElementById('verifyButton').addEventListener('click', async () => {
+            const chzzkId = document.getElementById('chzzkId').value;
+            const riotName = document.getElementById('riotName').value;
+            const riotTag = document.getElementById('riotTag').value;
+            const statusMessage = document.getElementById('statusMessage');
+
+            // Validate user input fields
+            if (!chzzkId || !riotName || !riotTag) {
+                statusMessage.innerText = 'Please fill in all fields';
+                return;
+            }
+
+            statusMessage.innerText = 'Verifying';
+
+            try {
+                // Call the Vercel serverless backend function
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        chzzkId: chzzkId,
+                        riotName: riotName,
+                        riotTag: riotTag,
+                        expectedIcon: randomIcon
+                    })
+                });
+
+                const data = await response.json();
+
+                // Display result based on backend response
+                if (response.ok && data.success) {
+                    statusMessage.innerText = 'Verification successful Your tier is ' + data.tier;
+                    statusMessage.style.color = '#00c853';
+                } else {
+                    statusMessage.innerText = 'Verification failed ' + (data.error || '');
+                    statusMessage.style.color = '#ff3d00';
+                }
+            } catch (error) {
+                statusMessage.innerText = 'An error occurred during verification';
+                statusMessage.style.color = '#ff3d00';
+            }
+        });
     </script>
 </body>
 </html>
