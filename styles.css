@@ -7,29 +7,42 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
 }
 
 /* Main container styling */
 .container {
     background-color: #ffffff;
-    padding: 40px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
     text-align: center;
-    width: 320px;
+    width: 360px;
+}
+
+h2 {
+    margin-top: 0;
+    color: #111111;
+}
+
+.description {
+    font-size: 13px;
+    color: #666666;
+    margin-bottom: 25px;
+    line-height: 1.4;
 }
 
 /* Form group spacing */
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     text-align: left;
 }
 
 /* Label styling */
 label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
+    font-size: 14px;
     font-weight: bold;
     color: #333333;
 }
@@ -37,20 +50,52 @@ label {
 /* Input field styling */
 input[type="text"] {
     width: 100%;
-    padding: 10px;
+    padding: 11px;
     box-sizing: border-box;
-    border: 1px solid #cccccc;
-    border-radius: 4px;
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* Instruction box for profile icon change */
+.instruction-box {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+    font-size: 13px;
+    color: #495057;
+    line-height: 1.5;
+}
+
+.instruction-title {
+    font-weight: bold;
+    color: #212529;
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+
+#randomIconNumber {
+    margin: 10px 0;
+    color: #00e676;
+    font-size: 28px;
+}
+
+.sub-text {
+    font-size: 11px;
+    color: #868e96;
+    margin-bottom: 0;
 }
 
 /* Button styling */
 button {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     background-color: #00e676;
     color: #ffffff;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 16px;
     font-weight: bold;
@@ -64,6 +109,7 @@ button:hover {
 /* Status message styling */
 #statusMessage {
     margin-top: 15px;
-    color: #ff3d00;
+    font-size: 13px;
     font-weight: bold;
+    line-height: 1.4;
 }
