@@ -47,6 +47,16 @@ label {
     color: #333333;
 }
 
+/* Help text styling */
+.help-text {
+    font-size: 11px;
+    color: #0084ff;
+    margin-top: 0;
+    margin-bottom: 8px;
+    line-height: 1.3;
+    word-break: keep-all;
+}
+
 /* Input field styling */
 input[type="text"] {
     width: 100%;
@@ -76,16 +86,15 @@ input[type="text"] {
     margin-bottom: 5px;
 }
 
+#iconImage {
+    margin-top: 10px;
+    border-radius: 8px;
+}
+
 #randomIconNumber {
     margin: 10px 0;
     color: #00e676;
     font-size: 28px;
-}
-
-.sub-text {
-    font-size: 11px;
-    color: #868e96;
-    margin-bottom: 0;
 }
 
 /* Button styling */

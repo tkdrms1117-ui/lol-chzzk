@@ -3,41 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>치지직 LoL 티어 인증 시스템</title>
+    <title>치지직 롤 티어 인증 시스템</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h2>치지직 x 롤 티어 인증</h2>
-        <p class="description">인증을 완료하면 스트리머 방송 화면 채팅창에 본인의 롤 티어 뱃지가 표시됩니다.</p>
+        <h2>티어 인증</h2>
+        <p class="description">스트리머 방송 화면 채팅창에 티어 뱃지를 표시합니다</p>
         
         <div class="form-group">
-            <label for="chzzkId">1. 치지직 고유 식별자 (chzzk_id)</label>
-            <input type="text" id="chzzkId" name="chzzkId" placeholder="치지직 주소창의 고유 ID 입력">
+            <label for="chzzkId">치지직 고유 식별자</label>
+            <p class="help-text">우측 상단 프로필 내 채널 클릭 후 주소창 마지막 영문 숫자 조합 복사</p>
+            <input type="text" id="chzzkId" name="chzzkId" placeholder="예 f1bacbddb031c474204b1a45889cec5b">
         </div>
         <div class="form-group">
-            <label for="riotName">2. 리그 오브 레전드 닉네임</label>
-            <input type="text" id="riotName" name="riotName" placeholder="예: 길가던미니언">
+            <label for="riotName">리그 오브 레전드 닉네임</label>
+            <input type="text" id="riotName" name="riotName">
         </div>
         <div class="form-group">
-            <label for="riotTag">3. 라이엇 태그 (Tag)</label>
-            <input type="text" id="riotTag" name="riotTag" placeholder="예: KR1 (## 제외)">
+            <label for="riotTag">라이엇 태그</label>
+            <input type="text" id="riotTag" name="riotTag" placeholder="예 KR1">
         </div>
         
         <div class="instruction-box">
-            <p class="instruction-title">💡 인증 방법</p>
-            <p>롤 클라이언트를 실행한 후, 본인의 프로필 아이콘을 아래의 **지정된 아이콘 번호**로 변경하고 확인 버튼을 눌러주세요.</p>
+            <p class="instruction-title">인증 방법</p>
+            <p>롤 클라이언트에서 본인의 프로필 아이콘을 아래 이미지로 변경하고 확인 버튼을 눌러주세요</p>
+            <img id="iconImage" src="" alt="Profile Icon" width="100" height="100">
             <h1 id="randomIconNumber"></h1>
-            <p class="sub-text">(인증 완료 후에는 원래 아이콘으로 바꾸셔도 됩니다)</p>
         </div>
         
         <button id="verifyButton">티어 인증하기</button>
         <p id="statusMessage"></p>
     </div>
     <script>
-        // Generate a random icon number between 1 and 28 for verification
+        // Generate a random icon number and set image source
         const randomIcon = Math.floor(Math.random() * 28) + 1;
-        document.getElementById('randomIconNumber').innerText = randomIcon + "번 아이콘";
+        document.getElementById('randomIconNumber').innerText = randomIcon + '번 아이콘';
+        document.getElementById('iconImage').src = 'https://ddragon.leagueoflegends.com/cdn/14.10.1/img/profileicon/' + randomIcon + '.png';
 
         // Add event listener to the verification button
         document.getElementById('verifyButton').addEventListener('click', async () => {
@@ -48,12 +50,12 @@
 
             // Validate user input fields
             if (!chzzkId || !riotName || !riotTag) {
-                statusMessage.innerText = '모든 항목을 정확히 입력해 주세요.';
+                statusMessage.innerText = '모든 항목을 정확히 입력해 주세요';
                 statusMessage.style.color = '#ff3d00';
                 return;
             }
 
-            statusMessage.innerText = '라이엇 서버에서 프로필 아이콘 및 티어를 확인 중입니다...';
+            statusMessage.innerText = '서버에서 확인 중입니다';
             statusMessage.style.color = '#333333';
 
             try {
@@ -75,22 +77,22 @@
 
                 // Display result based on backend response
                 if (response.ok && data.success) {
-                    statusMessage.innerText = '🎉 인증 성공! 조회된 티어: ' + data.tier;
+                    statusMessage.innerText = '인증 성공 조회된 티어 ' + data.tier;
                     statusMessage.style.color = '#00c853';
                 } else {
-                    let errorMsg = '인증에 실패했습니다. ';
+                    let errorMsg = '인증에 실패했습니다 ';
                     if (data.error === 'Icon does not match') {
-                        errorMsg += '롤 클라이언트의 프로필 아이콘이 지정된 번호와 다릅니다.';
+                        errorMsg += '프로필 아이콘이 다릅니다';
                     } else if (data.error === 'Riot account not found') {
-                        errorMsg += '존재하지 않는 라이엇 계정입니다.';
+                        errorMsg += '존재하지 않는 계정입니다';
                     } else {
-                        errorMsg += (data.error || '입력 정보를 다시 확인해 주세요.');
+                        errorMsg += data.error;
                     }
                     statusMessage.innerText = errorMsg;
                     statusMessage.style.color = '#ff3d00';
                 }
             } catch (error) {
-                statusMessage.innerText = '서버 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+                statusMessage.innerText = '서버 통신 중 오류가 발생했습니다';
                 statusMessage.style.color = '#ff3d00';
             }
         });
