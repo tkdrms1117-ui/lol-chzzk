@@ -54,7 +54,12 @@ export default async function handler(req, res) {
 
         // Verify profile icon
         if (currentIcon !== parseInt(expectedIcon)) {
-            return res.status(400).json({ success: false, error: 'Icon does not match' });
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Icon does not match',
+                currentIcon: currentIcon,
+                expectedIcon: expectedIcon
+            });
         }
 
         // Fetch league data to get solo rank tier

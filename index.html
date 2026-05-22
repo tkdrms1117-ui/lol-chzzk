@@ -80,7 +80,7 @@
                 } else {
                     let errorMsg = '인증에 실패했습니다 ';
                     if (data.error === 'Icon does not match') {
-                        errorMsg += '프로필 아이콘이 다릅니다';
+                        errorMsg += '라이엇 서버 동기화 대기 중입니다 현재 인식된 아이콘 ' + data.currentIcon + ' 요구 아이콘 ' + data.expectedIcon + ' 잠시 후 다시 시도해 주세요';
                     } else if (data.error === 'Riot account not found') {
                         errorMsg += '존재하지 않는 계정입니다';
                     } else if (data.error === 'Environment variables missing') {
