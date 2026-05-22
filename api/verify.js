@@ -7,11 +7,14 @@ export default async function handler(req, res) {
     const riotName = req.body.riotName;
     const riotTag = req.body.riotTag;
     const expectedIcon = req.body.expectedIcon;
+    const chzzkId = req.body.chzzkId;
     const apiKey = process.env.RIOT_API_KEY;
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
-    // Check if API key exists in environment variables
-    if (!apiKey) {
-        return res.status(500).json({ error: 'API key is missing' });
+    // Check environment variables
+    if (!apiKey || !supabaseUrl || !supabaseKey) {
+        return res.status(500).json({ error: 'Environment variables missing' });
     }
 
     try {
@@ -41,14 +44,52 @@ export default async function handler(req, res) {
         const summonerData = await summonerRes.json();
         const currentIcon = summonerData.profileIconId;
 
-        // Verify if the current profile icon matches the expected random icon
-        if (currentIcon === parseInt(expectedIcon)) {
-            return res.status(200).json({ success: true, summonerId: summonerData.id });
-        } else {
+        // Verify profile icon
+        if (currentIcon !== parseInt(expectedIcon)) {
             return res.status(400).json({ success: false, error: 'Icon does not match' });
         }
+
+        // Fetch league data to get solo rank tier
+        const leagueUrl = "https://kr.api.riotgames.com/lol/league/v4/entries/by-summoner/" + summonerData.id;
+        const leagueRes = await fetch(leagueUrl, {
+            headers: { "X-Riot-Token": apiKey }
+        });
+        const leagueData = await leagueRes.json();
+        
+        let userTier = "UNRANKED";
+        for (let i = 0; i < leagueData.length; i++) {
+            if (leagueData[i].queueType === "RANKED_SOLO_5x5") {
+                userTier = leagueData[i].tier;
+                break;
+            }
+        }
+
+        // Save verified data to Supabase database
+        const supabaseInsertUrl = supabaseUrl + "/rest/v1/verified_users";
+        const insertPayload = {
+            chzzk_id: chzzkId,
+            riot_name: riotName,
+            riot_tag: riotTag,
+            tier: userTier
+        };
+        
+        const supabaseRes = await fetch(supabaseInsertUrl, {
+            method: "POST",
+            headers: {
+                "apikey": supabaseKey,
+                "Authorization": "Bearer " + supabaseKey,
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates"
+            },
+            body: JSON.stringify(insertPayload)
+        });
+
+        if (!supabaseRes.ok) {
+            return res.status(500).json({ error: 'Failed to save to database' });
+        }
+
+        return res.status(200).json({ success: true, tier: userTier });
     } catch (error) {
-        // Handle unexpected server errors
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
