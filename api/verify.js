@@ -24,6 +24,10 @@ export default async function handler(req, res) {
             headers: { "X-Riot-Token": apiKey }
         });
 
+        // Handle Riot API key expiration
+        if (accountRes.status === 401 || accountRes.status === 403) {
+            return res.status(401).json({ error: 'Riot API Key expired or invalid' });
+        }
         if (!accountRes.ok) {
             return res.status(404).json({ error: 'Riot account not found' });
         }
@@ -37,6 +41,10 @@ export default async function handler(req, res) {
             headers: { "X-Riot-Token": apiKey }
         });
 
+        // Handle Riot API key expiration
+        if (summonerRes.status === 401 || summonerRes.status === 403) {
+            return res.status(401).json({ error: 'Riot API Key expired or invalid' });
+        }
         if (!summonerRes.ok) {
             return res.status(404).json({ error: 'Summoner not found' });
         }
