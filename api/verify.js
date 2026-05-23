@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 
 // Test bypass nickname - this account skips all riot verification
-const TEST_BYPASS_NICKNAME = "해군상근";
+//const TEST_BYPASS_NICKNAME = "해군상근";
 
 // Test account default tier returned when bypass is triggered
 const TEST_BYPASS_TIER = "UNRANKED";
