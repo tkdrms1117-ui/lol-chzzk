@@ -77,8 +77,10 @@ export default async function handler(req, res) {
             }
         }
 
-        // Save verified data to Supabase database
-        const supabaseInsertUrl = supabaseUrl + "/rest/v1/verified_users";
+        // Supabase DB 저장 (Upsert) - 중복 식별자 발생 시 덮어쓰기 옵션 강제 적용
+        const cleanSupabaseUrl = supabaseUrl.replace(/\/$/, ''); // URL 끝의 슬래시 제거
+        const supabaseInsertUrl = cleanSupabaseUrl + "/rest/v1/verified_users?on_conflict=chzzk_id";
+        
         const insertPayload = {
             chzzk_id: chzzkId,
             riot_name: riotName,
@@ -92,17 +94,19 @@ export default async function handler(req, res) {
                 "apikey": supabaseKey,
                 "Authorization": "Bearer " + supabaseKey,
                 "Content-Type": "application/json",
-                "Prefer": "resolution=merge-duplicates"
+                "Prefer": "resolution=merge-duplicates" // 충돌 시 병합(업데이트) 처리
             },
             body: JSON.stringify(insertPayload)
         });
 
         if (!supabaseRes.ok) {
-            return res.status(500).json({ error: 'Failed to save to database' });
+            // 수파베이스 저장이 실패할 경우 구체적인 에러 텍스트를 프론트엔드로 전달
+            const errorBody = await supabaseRes.text();
+            return res.status(500).json({ error: 'DB 저장 오류 상세: ' + errorBody });
         }
 
         return res.status(200).json({ success: true, tier: userTier });
     } catch (error) {
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error: ' + error.message });
     }
 }
