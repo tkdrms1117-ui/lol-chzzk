@@ -1,117 +1,158 @@
-export default async function handler(req, res) {
-    // Check if the request method is POST
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
+const { createClient } = require('@supabase/supabase-js');
+
+// Test bypass nickname - this account skips all riot verification
+const TEST_BYPASS_NICKNAME = "해군상근";
+
+// Test account default tier returned when bypass is triggered
+const TEST_BYPASS_TIER = "UNRANKED";
+
+module.exports = async function handler(req, res) {
+  // Allow POST requests only
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { chzzkId, riotName, riotTag, expectedIcon } = req.body;
+
+  // Check required fields
+  if (!chzzkId || !riotName || !riotTag) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  const RIOT_API_KEY = process.env.RIOT_API_KEY;
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+
+  if (!RIOT_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
+    return res.status(500).json({ error: 'Environment variables missing' });
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Bypass verification entirely for the test account nickname
+  if (riotName === TEST_BYPASS_NICKNAME) {
+    const bypassTier = TEST_BYPASS_TIER;
+
+    // Save test account to DB with bypass flag
+    const { error: dbError } = await supabase
+      .from('verified_users')
+      .upsert({
+        chzzk_id: chzzkId,
+        riot_name: riotName,
+        riot_tag: riotTag,
+        tier: bypassTier,
+        is_test_account: true,
+        verified_at: new Date().toISOString()
+      }, {
+        onConflict: 'chzzk_id'
+      });
+
+    if (dbError) {
+      return res.status(500).json({ error: 'DB save failed: ' + dbError.message });
     }
 
-    const riotName = req.body.riotName;
-    const riotTag = req.body.riotTag;
-    const expectedIcon = req.body.expectedIcon;
-    const chzzkId = req.body.chzzkId;
-    const apiKey = process.env.RIOT_API_KEY;
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    return res.status(200).json({
+      success: true,
+      tier: bypassTier + ' (테스트 계정)',
+      message: 'Test account bypass successful'
+    });
+  }
 
-    // Check environment variables
-    if (!apiKey || !supabaseUrl || !supabaseKey) {
-        return res.status(500).json({ error: 'Environment variables missing' });
+  try {
+    // Step 1: Fetch PUUID from Riot account API using game name and tag
+    const accountUrl =
+      'https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/' +
+      encodeURIComponent(riotName) + '/' +
+      encodeURIComponent(riotTag);
+
+    const accountRes = await fetch(accountUrl, {
+      headers: { 'X-Riot-Token': RIOT_API_KEY }
+    });
+
+    if (accountRes.status === 404) {
+      return res.status(400).json({ error: 'Riot account not found' });
     }
 
-    try {
-        // Fetch account data using Riot ID
-        const accountUrl = "https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/" + encodeURIComponent(riotName) + "/" + encodeURIComponent(riotTag);
-        const accountRes = await fetch(accountUrl, {
-            headers: { "X-Riot-Token": apiKey }
-        });
-
-        // Handle Riot API key expiration
-        if (accountRes.status === 401 || accountRes.status === 403) {
-            return res.status(401).json({ error: 'Riot API Key expired or invalid' });
-        }
-        if (!accountRes.ok) {
-            return res.status(404).json({ error: 'Riot account not found' });
-        }
-
-        const accountData = await accountRes.json();
-        const userPuuid = accountData.puuid;
-
-        // Fetch summoner data using PUUID
-        const summonerUrl = "https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/" + userPuuid;
-        const summonerRes = await fetch(summonerUrl, {
-            headers: { "X-Riot-Token": apiKey }
-        });
-
-        // Handle Riot API key expiration
-        if (summonerRes.status === 401 || summonerRes.status === 403) {
-            return res.status(401).json({ error: 'Riot API Key expired or invalid' });
-        }
-        if (!summonerRes.ok) {
-            return res.status(404).json({ error: 'Summoner not found' });
-        }
-
-        const summonerData = await summonerRes.json();
-        const currentIcon = summonerData.profileIconId;
-
-        // Verify profile icon
-        if (currentIcon !== parseInt(expectedIcon)) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Icon does not match',
-                currentIcon: currentIcon,
-                expectedIcon: expectedIcon
-            });
-        }
-
-        // Fetch league data to get solo rank tier
-        const leagueUrl = "https://kr.api.riotgames.com/lol/league/v4/entries/by-summoner/" + summonerData.id;
-        const leagueRes = await fetch(leagueUrl, {
-            headers: { "X-Riot-Token": apiKey }
-        });
-        const leagueData = await leagueRes.json();
-        
-        let userTier = "UNRANKED";
-        for (let i = 0; i < leagueData.length; i++) {
-            if (leagueData[i].queueType === "RANKED_SOLO_5x5") {
-                userTier = leagueData[i].tier;
-                break;
-            }
-        }
-
-        // Supabase URL 처리 로직 수정
-        // URL 끝에 슬래시가 있든 없든 안전하게 처리
-        const baseUrl = process.env.SUPABASE_URL.replace(/\/$/, '');
-        const table = "verified_users";
-        
-        // rest/v1 경로를 한 번만 명시하도록 수정
-        const supabaseInsertUrl = `${baseUrl}/rest/v1/${table}?on_conflict=chzzk_id`;
-        
-        const insertPayload = {
-            chzzk_id: chzzkId,
-            riot_name: riotName,
-            riot_tag: riotTag,
-            tier: userTier
-        };
-        
-        const supabaseRes = await fetch(supabaseInsertUrl, {
-            method: "POST",
-            headers: {
-                "apikey": supabaseKey,
-                "Authorization": "Bearer " + supabaseKey,
-                "Content-Type": "application/json",
-                "Prefer": "resolution=merge-duplicates" // 충돌 시 병합(업데이트) 처리
-            },
-            body: JSON.stringify(insertPayload)
-        });
-
-        return res.status(200).json({ success: true, tier: userTier });
-        if (!supabaseRes.ok) {
-            // 수파베이스 저장이 실패할 경우 구체적인 에러 텍스트를 프론트엔드로 전달
-            const errorBody = await supabaseRes.text();
-            return res.status(500).json({ error: 'DB 저장 오류 상세: ' + errorBody });
-        }
-
-        return res.status(200).json({ success: true, tier: userTier });
-    } catch (error) {
-        return res.status(500).json({ error: 'Internal server error: ' + error.message });
+    if (accountRes.status === 403 || accountRes.status === 401) {
+      return res.status(500).json({ error: 'Riot API Key expired or invalid' });
     }
-}
+
+    if (!accountRes.ok) {
+      return res.status(500).json({ error: 'Riot API error: ' + accountRes.status });
+    }
+
+    const accountData = await accountRes.json();
+    const puuid = accountData.puuid;
+
+    // Step 2: Fetch summoner data using PUUID to get current profile icon
+    const summonerUrl =
+      'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/' + puuid;
+
+    const summonerRes = await fetch(summonerUrl, {
+      headers: { 'X-Riot-Token': RIOT_API_KEY }
+    });
+
+    if (!summonerRes.ok) {
+      return res.status(500).json({ error: 'Summoner lookup failed' });
+    }
+
+    const summonerData = await summonerRes.json();
+    const currentIcon = summonerData.profileIconId;
+    const summonerId = summonerData.id;
+
+    // Step 3: Verify that the current icon matches the expected icon
+    if (currentIcon !== expectedIcon) {
+      return res.status(400).json({
+        error: 'Icon does not match',
+        currentIcon: currentIcon,
+        expectedIcon: expectedIcon
+      });
+    }
+
+    // Step 4: Fetch ranked tier information using summoner ID
+    const rankedUrl =
+      'https://kr.api.riotgames.com/lol/league/v4/entries/by-summoner/' + summonerId;
+
+    const rankedRes = await fetch(rankedUrl, {
+      headers: { 'X-Riot-Token': RIOT_API_KEY }
+    });
+
+    let tier = 'UNRANKED';
+
+    if (rankedRes.ok) {
+      const rankedData = await rankedRes.json();
+      // Find solo ranked queue entry
+      const soloQueue = rankedData.find(function(entry) {
+        return entry.queueType === 'RANKED_SOLO_5x5';
+      });
+      if (soloQueue) {
+        tier = soloQueue.tier + ' ' + soloQueue.rank;
+      }
+    }
+
+    // Step 5: Save verified user data to Supabase
+    const { error: dbError } = await supabase
+      .from('verified_users')
+      .upsert({
+        chzzk_id: chzzkId,
+        riot_name: riotName,
+        riot_tag: riotTag,
+        puuid: puuid,
+        summoner_id: summonerId,
+        tier: tier,
+        is_test_account: false,
+        verified_at: new Date().toISOString()
+      }, {
+        onConflict: 'chzzk_id'
+      });
+
+    if (dbError) {
+      return res.status(500).json({ error: 'DB save failed: ' + dbError.message });
+    }
+
+    return res.status(200).json({ success: true, tier: tier });
+
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error: ' + err.message });
+  }
+};
