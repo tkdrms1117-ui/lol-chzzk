@@ -77,9 +77,13 @@ export default async function handler(req, res) {
             }
         }
 
-        // Supabase DB 저장 (Upsert) - 중복 식별자 발생 시 덮어쓰기 옵션 강제 적용
-        const cleanSupabaseUrl = supabaseUrl.replace(/\/$/, ''); // URL 끝의 슬래시 제거
-        const supabaseInsertUrl = cleanSupabaseUrl + "/rest/v1/verified_users?on_conflict=chzzk_id";
+        // Supabase URL 처리 로직 수정
+        // URL 끝에 슬래시가 있든 없든 안전하게 처리
+        const baseUrl = process.env.SUPABASE_URL.replace(/\/$/, '');
+        const table = "verified_users";
+        
+        // rest/v1 경로를 한 번만 명시하도록 수정
+        const supabaseInsertUrl = `${baseUrl}/rest/v1/${table}?on_conflict=chzzk_id`;
         
         const insertPayload = {
             chzzk_id: chzzkId,
@@ -99,6 +103,7 @@ export default async function handler(req, res) {
             body: JSON.stringify(insertPayload)
         });
 
+        return res.status(200).json({ success: true, tier: userTier });
         if (!supabaseRes.ok) {
             // 수파베이스 저장이 실패할 경우 구체적인 에러 텍스트를 프론트엔드로 전달
             const errorBody = await supabaseRes.text();
